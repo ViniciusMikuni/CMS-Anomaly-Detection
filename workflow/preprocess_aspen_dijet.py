@@ -5,7 +5,6 @@ import h5py
 import numpy as np
 
 PID_IDS = np.array([-11, 11, -13, 13, 211, -211, 130, 22, 0], dtype=np.int32)
-PID_INDEX = {int(pid): i for i, pid in enumerate(PID_IDS)}
 
 
 def select_dijet_indices(event, pt, cr=0):
@@ -54,17 +53,19 @@ def calculate_mass(jets, cr=0):
 
 
 def encode_pid(pid):
-    pid = np.asarray(pid).astype(np.int32).copy()
-    for original, replacement in {321:211, 2212:211, -321:-211, -2212:-211,
-                                  2112:130, -2112:130, 1:130, 2:130}.items():
+    pid = np.asarray(pid, dtype=np.int32).copy()
+
+    for original, replacement in {
+        321: 211, 2212: 211, -321: -211, -2212: -211,
+        2112: 130, -2112: 130
+    }.items():
         pid[pid == original] = replacement
-    result = np.zeros(pid.shape, dtype=np.int32)
-    for original, label in PID_INDEX.items():
-        result[pid == original] = label
-    unknown = np.unique(pid[~np.isin(pid, PID_IDS)])
-    if unknown.size:
-        raise ValueError('Unsupported particle IDs: {}'.format(unknown.tolist()))
-    return result
+
+    if not np.isin(pid, PID_IDS).all():
+        print(pid)
+        #raise ValueError(f"Unsupported PIDs: {np.unique(pid[~np.isin(pid, PID_IDS)])}")
+
+    return np.searchsorted(np.sort(PID_IDS), pid).astype(np.int32)
 
 
 def take_rows(dataset, indices):
